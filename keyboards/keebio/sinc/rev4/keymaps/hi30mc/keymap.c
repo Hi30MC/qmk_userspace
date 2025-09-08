@@ -4,7 +4,7 @@
 #include QMK_KEYBOARD_H
 #include <lib/lib8tion/lib8tion.h>
 
-enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT };
+enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, FL_TRAN, FL_LESB, FL_SYS };
 
 #define LAYER_CYCLE_START 0
 #define LAYER_CYCLE_END 2
@@ -55,6 +55,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (curr_flag > FLAG_CYCLE_END) {
                 curr_flag = TRANS;
             }
+            return false;
+        case FL_TRAN:
+            if (!record->event.pressed){
+                return false;
+            }
+            curr_flag = TRANS;
+            return false;
+        case FL_LESB:
+            if (!record->event.pressed){
+                return false;
+            }
+            curr_flag = LESBIAN;
+            return false;
+        case FL_SYS:
+            if (!record->event.pressed){
+                return false;
+            }
+            curr_flag = SYSTEM;
             return false;
         default:
             return true;
@@ -174,7 +192,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
   [2] = LAYOUT_80_with_macro(
    _______ ,         _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
-   RM_TOGG, _______, _______, _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______,
+   RM_TOGG, _______, _______, _______, _______, _______, _______, _______, _______,   FL_TRAN, FL_LESB, FL_SYS, _______, _______, _______, _______, _______, _______,
    RM_SPDU, RM_SPDD, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______, _______,
    _______, _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______,          _______, _______,
    _______, _______, _______,          _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
