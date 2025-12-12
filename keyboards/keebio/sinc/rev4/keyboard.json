@@ -9,7 +9,8 @@
     "diode_direction": "COL2ROW",
     "features": {
         "console": true,
-        "rgb_matrix": true
+        "rgb_matrix": true,
+        "nkro": true
     },
     "split": {
         "enabled": true,

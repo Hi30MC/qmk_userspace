@@ -4,7 +4,7 @@
 #include QMK_KEYBOARD_H
 #include <lib/lib8tion/lib8tion.h>
 
-enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, FL_TRAN, FL_LESB, FL_SYS };
+enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, KC_TGNE, FL_TRAN, FL_LESB, FL_SYS };
 
 #define LAYER_CYCLE_START 0
 #define LAYER_CYCLE_END 2
@@ -21,6 +21,12 @@ uint8_t curr_flag = TRANS;
 
 void update_flag(uint8_t new_flag) {
     curr_flag = new_flag;
+}
+
+uint8_t togg_state = 1;
+
+void togg_led(void) {
+    togg_state = !togg_state;
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -56,6 +62,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 curr_flag = TRANS;
             }
             return false;
+        case KC_TGNE:
+            if (!record->event.pressed) {
+                return false;
+            }
+            togg_led();
+            return false;
         case FL_TRAN:
             if (!record->event.pressed){
                 return false;
@@ -89,15 +101,15 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         }
     } else if (layer == 1) {
         if (clockwise) {
-            tap_code(QK_MOUSE_WHEEL_UP);
+            rgb_matrix_decrease_val_noeeprom();
         } else {
-            tap_code(QK_MOUSE_WHEEL_DOWN);
+            rgb_matrix_increase_val_noeeprom();
         }
     } else if (layer == 2) {
         if (clockwise) {
-            tap_code(KC_PGUP);
+            rgb_matrix_decrease_speed_noeeprom();
         } else {
-            tap_code(KC_PGDN);
+            rgb_matrix_increase_speed_noeeprom();
         }
     }
     return false;
@@ -150,12 +162,12 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     const uint8_t stripe_width = 224 / num_colors;
 
     uint16_t scroll_offset = scale16by8(g_rgb_timer, qadd8(rgb_matrix_config.speed / 4, 1)) * direction;
-
+    uint16_t val = rgb_matrix_get_val();
     for (uint8_t i = led_min; i < led_max; i++) {
         uint16_t scrolled_x = (g_led_config.point[i].x + scroll_offset) % (stripe_width * num_colors);
         HSV      color      = (HSV)flag[scrolled_x / stripe_width];
 
-        color.v = 50 * color.v / 255;
+        color.v = ((val * color.v * togg_state) / 255);
         RGB rgb = hsv_to_rgb(color);
         rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
     }
@@ -165,38 +177,40 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
     if (host_keyboard_led_state().num_lock && get_highest_layer(layer_state) == 1) {
         rgb_matrix_set_color(15, RGB_RED);
+        rgb_matrix_set_color(86, RGB_RED);
     }
     return false;
 }
 
 void keyboard_post_init_user(void) {
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE);
+    update_flag(LESBIAN);
+    keymap_config.nkro = true;
 }
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT_80_with_macro(
     KC_CYLT,          KC_ESC,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,              KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL,  KC_INS,
     XXXXXXX, KC_F16 , KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,      KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_MPRV, KC_MPLY, KC_MNXT,
-    XXXXXXX, XXXXXXX, KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,               KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_END,
-    XXXXXXX, XXXXXXX, KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,               KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,  KC_PGUP,
-    XXXXXXX,LSG(KC_S),    KC_LSFT,      KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,               KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT, KC_UP,   KC_PGDN,
+    XXXXXXX, XXXXXXX, KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,               KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS, KC_PGUP,
+    XXXXXXX, XXXXXXX, KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,               KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,      KC_ENT,      KC_PGDN,
+    XXXXXXX,LSG(KC_S),    KC_LSFT,      KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,               KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT, KC_UP,   KC_END,
     XXXXXXX, KC_CYLR, MO(2),  KC_LCTL, KC_LGUI,  KC_LALT, KC_BSPC, MO(1),                       KC_SPC,  TG(1),   KC_RALT, KC_RCTL, KC_RGUI, KC_LEFT, KC_DOWN, KC_RGHT
   ),
   [1] = LAYOUT_80_with_macro(
     _______,          _______, KC_F13 , KC_F14 , KC_F15 , KC_F16 , KC_F17 , KC_F18 ,            KC_F19 , KC_F20 , KC_F21 , KC_F22 , KC_F23 , KC_F24 , _______, _______,
-    _______, _______, _______, KC_NUM , KC_PSLS, KC_PAST, KC_PMNS, _______, _______,   _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, _______,            _______, _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, KC_KP_4, KC_KP_5, KC_KP_6, _______, _______,            _______, _______, _______, _______, _______, _______,          _______, _______,
-    _______, _______, _______,          KC_KP_1, KC_KP_2, KC_KP_3, KC_DEL, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
-    _______, _______, _______, _______, KC_KP_0, KC_PDOT, KC_PENT, MO(1),                       TG(2),   TG(1)  , _______, _______, _______, _______, _______, _______
+    _______, _______, _______, KC_NUM , KC_PSLS, KC_PAST, KC_PMNS, _______, _______,   KC_NUM , _______, _______, _______, _______, _______, _______, _______, _______,
+    _______, _______, _______, KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, _______,            KC_KP_7, KC_KP_8, KC_KP_9, KC_PPLS, _______, _______, _______, _______, _______,
+    _______, _______, _______, KC_KP_4, KC_KP_5, KC_KP_6, _______, _______,            KC_KP_4, KC_KP_5, KC_KP_6, KC_PENT, _______, _______,      _______,     _______,
+    _______, _______,     _______,      KC_KP_1, KC_KP_2, KC_KP_3, KC_DEL,  _______,            KC_KP_1, KC_KP_2, KC_KP_3, KC_PENT, _______, _______, _______, _______,
+    _______, _______, _______, _______, KC_KP_0, KC_PDOT, KC_PENT, MO(1),                       KC_KP_0, TG(1)  , TG(2)  , _______, _______, _______, _______, _______
   ),
   [2] = LAYOUT_80_with_macro(
    _______ ,         _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
-   RM_TOGG, _______, _______, _______, _______, _______, _______, _______, _______,   FL_TRAN, FL_LESB, FL_SYS, _______, _______, _______, _______, _______, _______,
-   RM_SPDU, RM_SPDD, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______, _______,
-   _______, _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______,          _______, _______,
-   _______, NK_ON,   _______,          _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
-   QK_BOOT, NK_TOGG, MO(2),   _______, _______, _______, _______, _______,                     TG(2),   KC_LRST, _______, _______, _______, _______, _______, QK_BOOT
+   KC_TGNE, _______, _______, _______, _______, _______, FL_TRAN, FL_LESB, FL_SYS,    FL_TRAN, FL_LESB, FL_SYS,  _______, _______, _______, _______, _______, _______,
+   _______, _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______, _______,
+   _______, _______ , _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______,          _______, _______,
+   _______, NK_ON,       _______,      _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
+   QK_BOOT, NK_TOGG, MO(2),   _______, _______, _______, _______, _______,                     _______, KC_LRST, TG(2)  , _______, _______, _______, _______, QK_BOOT
   ),
 //[N] = LAYOUT_80_with_macro( //BLANK SET
 // _______,          _______, _______, _______, _______, _______, _______, _______,            _______, _______, _______, _______, _______, _______, _______, _______,
