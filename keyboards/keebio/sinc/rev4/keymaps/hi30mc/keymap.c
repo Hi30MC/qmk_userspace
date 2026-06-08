@@ -3,6 +3,8 @@
 
 #include QMK_KEYBOARD_H
 #include <lib/lib8tion/lib8tion.h>
+#include "transactions.h"
+// enum SPLIT_TRANSACTION_IDS_USER { LED_META };
 
 enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, KC_TGNE, FL_TRAN, FL_LESB, FL_SYS };
 
@@ -182,9 +184,44 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     return false;
 }
 
+typedef struct _master_to_slave_t {
+    uint8_t m2s_flag;
+    uint8_t m2s_direction;
+    uint8_t m2s_toggle_state;
+} master_to_slave_t;
+
+typedef struct _slave_to_master_t {
+    uint8_t s2m_flag;
+    uint8_t s2m_direction;
+    uint8_t s2m_toggle_state;
+} slave_to_master_t;
+
+void led_meta_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
+    const master_to_slave_t *m2s = (const master_to_slave_t*)in_data;
+    slave_to_master_t *s2m = (slave_to_master_t*)out_data;
+    s2m->s2m_flag = m2s->m2s_flag;
+    s2m->s2m_direction = m2s->m2s_direction;
+    s2m->s2m_toggle_state = m2s->m2s_toggle_state;
+}
+
 void keyboard_post_init_user(void) {
     update_flag(LESBIAN);
     keymap_config.nkro = true;
+    transaction_register_rpc(LED_META, led_meta_slave_handler);
+}
+
+void housekeeping_task_user(void) {
+    if (is_keyboard_master()) {
+        static uint32_t last_sync = 0;
+        if (timer_elapsed32(last_sync) > 500) {
+            master_to_slave_t m2s = {curr_flag, direction, togg_state};
+            if (transaction_rpc_send(LED_META, sizeof(m2s), &m2s)) {
+                last_sync = timer_read32();
+            } else {
+                dprint("Slave sync failed.\n");
+            }
+        }
+    }
 }
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
