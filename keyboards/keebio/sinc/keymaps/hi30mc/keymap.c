@@ -228,8 +228,8 @@ void housekeeping_task_user(void) {
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [0] = { ENCODER_CCW_CW(KC_VOLU, KC_VOLD) },
-    [1] = { ENCODER_CCW_CW(ENC_CW1, ENC_ACW1) },
-    [2] = { ENCODER_CCW_CW(ENC_CW2, ENC_ACW2) },
+    [1] = { ENCODER_CCW_CW(ENC_ACW1, ENC_CW1) },
+    [2] = { ENCODER_CCW_CW(ENC_ACW2, ENC_CW2) },
 };
 #endif
 
