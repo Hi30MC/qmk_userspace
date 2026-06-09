@@ -1,6 +1,4 @@
 {
     "userspace_version": "1.1",
-    "build_targets": [
-        ["keebio/sinc/rev4", "hi30mc"]
-    ]
+    "build_targets": [["keebio/sinc/rev4", "hi30mc"]]
 }
