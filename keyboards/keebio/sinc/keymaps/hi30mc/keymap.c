@@ -179,7 +179,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
     if (host_keyboard_led_state().num_lock && get_highest_layer(layer_state) == 1) {
         rgb_matrix_set_color(15, RGB_RED);
-        rgb_matrix_set_color(86, RGB_RED);
+        rgb_matrix_set_color(70, RGB_RED);
     }
     return false;
 }
@@ -196,12 +196,11 @@ typedef struct _slave_to_master_t {
     uint8_t s2m_toggle_state;
 } slave_to_master_t;
 
-void led_meta_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
+void led_meta_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t len, void* unused) {
     const master_to_slave_t *m2s = (const master_to_slave_t*)in_data;
-    slave_to_master_t *s2m = (slave_to_master_t*)out_data;
-    s2m->s2m_flag = m2s->m2s_flag;
-    s2m->s2m_direction = m2s->m2s_direction;
-    s2m->s2m_toggle_state = m2s->m2s_toggle_state;
+    direction = m2s->m2s_direction;
+    curr_flag = m2s->m2s_flag;
+    togg_state = m2s->m2s_toggle_state;
 }
 
 void keyboard_post_init_user(void) {
@@ -213,10 +212,12 @@ void keyboard_post_init_user(void) {
 void housekeeping_task_user(void) {
     if (is_keyboard_master()) {
         static uint32_t last_sync = 0;
-        if (timer_elapsed32(last_sync) > 500) {
+        if (timer_elapsed32(last_sync) > 100) {
             master_to_slave_t m2s = {curr_flag, direction, togg_state};
-            if (transaction_rpc_send(LED_META, sizeof(m2s), &m2s)) {
+            slave_to_master_t s2m = {0};
+            if (transaction_rpc_exec(LED_META, sizeof(m2s), &m2s, sizeof(s2m), &s2m)) {
                 last_sync = timer_read32();
+                // dprintf("Slave value: %d\n", s2m.s2m_direction);
             } else {
                 dprint("Slave sync failed.\n");
             }
@@ -226,9 +227,9 @@ void housekeeping_task_user(void) {
 
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
-    [1] = { ENCODER_CCW_CW(ENC_ACW1, ENC_CW1) },
-    [2] = { ENCODER_CCW_CW(ENC_ACW2, ENC_CW2) },
+    [0] = { ENCODER_CCW_CW(KC_VOLU, KC_VOLD) },
+    [1] = { ENCODER_CCW_CW(ENC_CW1, ENC_ACW1) },
+    [2] = { ENCODER_CCW_CW(ENC_CW2, ENC_ACW2) },
 };
 #endif
 
