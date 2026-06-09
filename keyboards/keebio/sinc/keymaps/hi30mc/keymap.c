@@ -6,7 +6,7 @@
 #include "transactions.h"
 // enum SPLIT_TRANSACTION_IDS_USER { LED_META };
 
-enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, KC_TGNE, FL_TRAN, FL_LESB, FL_SYS };
+enum keycodes { KC_CYLR = QK_USER, KC_LRST, KC_CYLT, KC_TGNE, FL_TRAN, FL_LESB, FL_SYS, ENC_ACW1, ENC_CW1, ENC_ACW2, ENC_CW2};
 
 #define LAYER_CYCLE_START 0
 #define LAYER_CYCLE_END 2
@@ -88,33 +88,33 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             curr_flag = SYSTEM;
             return false;
+        case ENC_ACW1:
+            if (!record->event.pressed) {
+                return false;
+            }
+            rgb_matrix_increase_val_noeeprom();
+            return false;
+        case ENC_CW1:
+            if (!record->event.pressed) {
+                return false;
+            }
+            rgb_matrix_decrease_val_noeeprom();
+            return false;
+        case ENC_ACW2:
+            if (!record->event.pressed) {
+                return false;
+            }
+            rgb_matrix_increase_speed_noeeprom();
+            return false;
+        case ENC_CW2:
+            if (!record->event.pressed) {
+                return false;
+            }
+            rgb_matrix_decrease_speed_noeeprom();
+            return false;
         default:
             return true;
     }
-}
-
-bool encoder_update_user(uint8_t index, bool clockwise) {
-    uint8_t layer = get_highest_layer(layer_state);
-    if (layer == 0) {
-        if (clockwise) {
-            tap_code(KC_VOLD);
-        } else {
-            tap_code(KC_VOLU);
-        }
-    } else if (layer == 1) {
-        if (clockwise) {
-            rgb_matrix_decrease_val_noeeprom();
-        } else {
-            rgb_matrix_increase_val_noeeprom();
-        }
-    } else if (layer == 2) {
-        if (clockwise) {
-            rgb_matrix_decrease_speed_noeeprom();
-        } else {
-            rgb_matrix_increase_speed_noeeprom();
-        }
-    }
-    return false;
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
@@ -223,6 +223,14 @@ void housekeeping_task_user(void) {
         }
     }
 }
+
+#if defined(ENCODER_MAP_ENABLE)
+const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
+    [0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
+    [1] = { ENCODER_CCW_CW(ENC_ACW1, ENC_CW1) },
+    [2] = { ENCODER_CCW_CW(ENC_ACW2, ENC_CW2) },
+};
+#endif
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [0] = LAYOUT_80_with_macro(
